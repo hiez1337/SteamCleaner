@@ -36,9 +36,11 @@ class CacheCategoryCard(ft.Container):
         items: list[CacheItem],
         on_item_toggle: callable,
         on_category_toggle: callable,
+        on_open_path: callable = None,
     ):
         self.category_name = category_name
         self.on_category_toggle = on_category_toggle
+        self.on_open_path = on_open_path
         self.tiles_by_id: dict[str, CacheItemTile] = {}
 
         cat_icon = CATEGORY_ICONS.get(category_name, ft.Icons.FOLDER)
@@ -82,7 +84,11 @@ class CacheCategoryCard(ft.Container):
 
         self.items_column = ft.Column(spacing=4)
         for item in items:
-            tile = CacheItemTile(item=item, on_toggle=on_item_toggle)
+            tile = CacheItemTile(
+                item=item,
+                on_toggle=on_item_toggle,
+                on_open_path=on_open_path,
+            )
             self.tiles_by_id[item.id] = tile
             self.items_column.controls.append(tile)
 

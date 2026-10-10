@@ -10,10 +10,12 @@ from PIL import ImageGrab
 os.makedirs("screenshots", exist_ok=True)
 output_img = sys.argv[1] if len(sys.argv) > 1 else "screenshots/test.png"
 
-# Kill any existing flet processes first
-for p in psutil.process_iter(['name']):
+# Kill any existing flet or steamcleaner processes first
+for p in psutil.process_iter(['name', 'cmdline']):
     try:
-        if 'flet' in p.info['name'].lower():
+        name = (p.info.get('name') or '').lower()
+        cmd = ' '.join(p.info.get('cmdline') or []).lower()
+        if 'flet' in name or 'steamcleaner' in name or 'steam_cleaner' in cmd:
             p.kill()
     except Exception:
         pass

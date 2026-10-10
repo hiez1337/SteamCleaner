@@ -7,7 +7,7 @@ import asyncio
 import datetime
 import flet as ft
 from core.models import format_size
-from core.platform_utils import write_temp_log, copy_to_windows_clipboard
+from core.platform_utils import write_temp_log, copy_to_windows_clipboard, open_path_in_explorer, LOG_FILE_PATH
 from ui.theme import (
     CARD_BG,
     CARD_INNER_BG,
@@ -55,6 +55,12 @@ class ConsoleView(ft.Container):
                 ft.Icon(ft.Icons.TERMINAL, color=ACCENT_PRIMARY, size=18),
                 ft.Text("Журнал операций", size=13, weight=ft.FontWeight.BOLD, color=TEXT_PRIMARY),
                 ft.Container(expand=True),
+                ft.IconButton(
+                    icon=ft.Icons.FOLDER_OPEN_OUTLINED,
+                    icon_size=18,
+                    tooltip="Открыть файл лога (%TEMP%/steam_cleaner.log) в Проводнике",
+                    on_click=self._handle_open_log_file,
+                ),
                 ft.IconButton(
                     icon=ft.Icons.COPY_ALL_OUTLINED,
                     icon_size=18,
@@ -105,6 +111,9 @@ class ConsoleView(ft.Container):
             border_radius=10,
             padding=ft.Padding.symmetric(horizontal=8, vertical=3),
         )
+
+    def _handle_open_log_file(self, e):
+        open_path_in_explorer(LOG_FILE_PATH)
 
     async def _handle_copy(self, e):
         full_text = self.get_full_text()

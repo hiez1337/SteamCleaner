@@ -31,6 +31,9 @@ from core.backup_service import (
 from core.platform_utils import (
     write_temp_log,
     copy_to_windows_clipboard,
+    open_path_in_explorer,
+    get_item_paths_info,
+    open_cache_item_in_explorer,
     LOG_FILE_PATH,
 )
 
@@ -54,5 +57,8 @@ __all__ = [
     "get_backup_info",
     "write_temp_log",
     "copy_to_windows_clipboard",
+    "open_path_in_explorer",
+    "get_item_paths_info",
+    "open_cache_item_in_explorer",
     "LOG_FILE_PATH",
 ]

@@ -22,6 +22,8 @@ from core import (
     restore_backup_async,
     get_backup_info,
     copy_to_windows_clipboard,
+    open_cache_item_in_explorer,
+    open_path_in_explorer,
     LOG_FILE_PATH,
 )
 from ui import get_app_theme, AppState
@@ -182,6 +184,15 @@ async def main(page: ft.Page):
     # Checklist Scrollable Column
     checklist_column = ft.Column(spacing=8, scroll=ft.ScrollMode.AUTO, expand=True)
 
+    async def handle_open_cache_path(item: CacheItem):
+        ok, msg, opened_path = await asyncio.to_thread(open_cache_item_in_explorer, item)
+        if ok:
+            console_view.append_log(msg, "INFO")
+            show_snack(f"Открыто: {opened_path}")
+        else:
+            console_view.append_log(msg, "WARN")
+            show_snack(msg, is_error=True)
+
     def rebuild_checklist_ui():
         checklist_column.controls.clear()
         category_cards.clear()
@@ -192,6 +203,7 @@ async def main(page: ft.Page):
                 items=items,
                 on_item_toggle=handle_item_toggle,
                 on_category_toggle=handle_category_toggle,
+                on_open_path=handle_open_cache_path,
             )
             category_cards[cat_name] = card
             checklist_column.controls.append(card)

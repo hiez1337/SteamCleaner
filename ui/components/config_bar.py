@@ -7,6 +7,7 @@ import os
 import asyncio
 import flet as ft
 from core.models import AccountInfo
+from core.platform_utils import open_path_in_explorer
 from ui.theme import (
     CARD_BG,
     CARD_INNER_BG,
@@ -41,6 +42,7 @@ class ConfigBar(ft.Container):
     ):
         self.steam_path = steam_path
         self.cs2_path = cs2_path
+        self.selected_account_id = selected_account_id
         self.on_browse_click = on_browse_click
         self.on_account_change = on_account_change
         self.on_scan_click = on_scan_click
@@ -73,6 +75,7 @@ class ConfigBar(ft.Container):
             padding=ft.Padding.symmetric(horizontal=10, vertical=5),
             tooltip="Открыть директорию Steam в Проводнике",
             on_click=self._open_steam_in_explorer,
+            mouse_cursor=ft.MouseCursor.CLICK,
         )
 
         self.browse_btn = ft.OutlinedButton(
@@ -97,10 +100,16 @@ class ConfigBar(ft.Container):
             color=ACCENT_SUCCESS if cs2_path else TEXT_SECONDARY,
             weight=ft.FontWeight.W_600,
         )
+        self.cs2_open_icon = ft.Icon(
+            ft.Icons.OPEN_IN_NEW,
+            size=11,
+            color=ACCENT_SUCCESS if cs2_path else TEXT_SECONDARY,
+            visible=bool(cs2_path),
+        )
 
         self.cs2_status_pill = ft.Container(
             content=ft.Row(
-                controls=[self.cs2_status_icon, self.cs2_status_text],
+                controls=[self.cs2_status_icon, self.cs2_status_text, self.cs2_open_icon],
                 spacing=4,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
@@ -108,6 +117,9 @@ class ConfigBar(ft.Container):
             border=ft.Border.all(1, SUCCESS_BORDER if cs2_path else OUTLINE_VARIANT),
             border_radius=12,
             padding=ft.Padding.symmetric(horizontal=8, vertical=4),
+            tooltip="Нажмите, чтобы открыть директорию CS2 в Проводнике" if cs2_path else "CS2 не найдена",
+            on_click=self._open_cs2_in_explorer,
+            mouse_cursor=ft.MouseCursor.CLICK if cs2_path else ft.MouseCursor.BASIC,
         )
 
         # Account dropdown
@@ -125,6 +137,13 @@ class ConfigBar(ft.Container):
             text_size=12,
             height=38,
             on_select=self._handle_account_change,
+        )
+
+        self.account_folder_btn = ft.IconButton(
+            icon=ft.Icons.FOLDER_SHARED_OUTLINED,
+            icon_size=18,
+            tooltip="Открыть папку userdata выбранного аккаунта в Проводнике",
+            on_click=self._open_account_in_explorer,
         )
 
         # Action buttons
@@ -193,6 +212,7 @@ class ConfigBar(ft.Container):
                             ft.Icon(ft.Icons.ACCOUNT_CIRCLE_OUTLINED, color=TEXT_SECONDARY, size=18),
                             ft.Text("Аккаунт:", size=12, weight=ft.FontWeight.BOLD, color=TEXT_PRIMARY),
                             ft.Container(content=self.account_dropdown, expand=True),
+                            self.account_folder_btn,
                         ],
                         alignment=ft.MainAxisAlignment.START,
                         vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -229,8 +249,17 @@ class ConfigBar(ft.Container):
         )
 
     def _open_steam_in_explorer(self, e):
-        if self.steam_path and os.path.isdir(self.steam_path):
-            os.startfile(self.steam_path)
+        if self.steam_path:
+            open_path_in_explorer(self.steam_path)
+
+    def _open_cs2_in_explorer(self, e):
+        if self.cs2_path:
+            open_path_in_explorer(self.cs2_path)
+
+    def _open_account_in_explorer(self, e):
+        if self.steam_path and self.selected_account_id:
+            acc_dir = os.path.join(self.steam_path, "userdata", self.selected_account_id)
+            open_path_in_explorer(acc_dir)
 
     async def _handle_browse(self, e):
         if self.on_browse_click:
@@ -239,6 +268,7 @@ class ConfigBar(ft.Container):
                 await res
 
     async def _handle_account_change(self, e):
+        self.selected_account_id = self.account_dropdown.value
         if self.on_account_change:
             res = self.on_account_change(self.account_dropdown.value)
             if asyncio.iscoroutine(res):
@@ -267,18 +297,22 @@ class ConfigBar(ft.Container):
             res = self.on_restore_click(e)
             if asyncio.iscoroutine(res):
                 await res
+
     def update_paths(self, steam_path: str, cs2_path: str, accounts: list[AccountInfo], selected_acc_id: str):
         """Update display when path or accounts change."""
         self.steam_path = steam_path
         self.cs2_path = cs2_path
+        self.selected_account_id = selected_acc_id
         self.steam_path_text.value = steam_path or "Не найден"
 
         self.cs2_status_icon.name = ft.Icons.CHECK_CIRCLE if cs2_path else ft.Icons.ERROR_OUTLINE
         self.cs2_status_icon.color = ACCENT_SUCCESS if cs2_path else TEXT_SECONDARY
         self.cs2_status_text.value = "CS2 найдена" if cs2_path else "CS2 не найдена"
         self.cs2_status_text.color = ACCENT_SUCCESS if cs2_path else TEXT_SECONDARY
+        self.cs2_open_icon.visible = bool(cs2_path)
         self.cs2_status_pill.bgcolor = SUCCESS_BG if cs2_path else CARD_INNER_BG
         self.cs2_status_pill.border = ft.Border.all(1, SUCCESS_BORDER if cs2_path else OUTLINE_VARIANT)
+        self.cs2_status_pill.tooltip = "Нажмите, чтобы открыть директорию CS2 в Проводнике" if cs2_path else "CS2 не найдена"
 
         if accounts:
             self.account_dropdown.options = [
@@ -303,4 +337,5 @@ class ConfigBar(ft.Container):
         self.restore_btn.disabled = is_busy
         self.browse_btn.disabled = is_busy
         self.account_dropdown.disabled = is_busy
+        self.account_folder_btn.disabled = is_busy
         self.update()

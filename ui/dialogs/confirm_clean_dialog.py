@@ -5,6 +5,7 @@ Confirmation modal dialog before performing destructive cache purge.
 
 import flet as ft
 from core.models import CacheItem, format_size
+from core.platform_utils import get_item_paths_info
 from ui.theme import (
     CARD_INNER_BG,
     OUTLINE_VARIANT,
@@ -14,6 +15,7 @@ from ui.theme import (
     ACCENT_DANGER,
     TEXT_PRIMARY,
     TEXT_SECONDARY,
+    TEXT_MUTED,
     WARNING_BG,
     WARNING_BORDER,
 )
@@ -21,8 +23,8 @@ from ui.theme import (
 
 class ConfirmCleanDialog(ft.AlertDialog):
     """
-    Modal dialog providing an itemized breakdown of data to be purged
-    and strong warnings if convar resets are selected.
+    Modal dialog providing an itemized breakdown of data to be purged,
+    verified target paths, and strong warnings if convar resets are selected.
     """
 
     def __init__(self, selected_items: list[CacheItem], on_confirm: callable):
@@ -53,6 +55,41 @@ class ConfirmCleanDialog(ft.AlertDialog):
             border=ft.Border.all(1, OUTLINE_VARIANT),
             border_radius=8,
             padding=10,
+        )
+
+        items_preview_rows = []
+        for it in selected_items:
+            disp_path, full_tip, _ = get_item_paths_info(it)
+            items_preview_rows.append(
+                ft.Row(
+                    controls=[
+                        ft.Icon(ft.Icons.CHECK_CIRCLE_OUTLINE, size=13, color=ACCENT_PRIMARY),
+                        ft.Text(it.label, size=11, weight=ft.FontWeight.W_600, color=TEXT_PRIMARY),
+                        ft.Text(
+                            f"— {disp_path}",
+                            size=9.5,
+                            color=TEXT_MUTED,
+                            font_family="Consolas",
+                            overflow=ft.TextOverflow.ELLIPSIS,
+                            expand=True,
+                        ),
+                    ],
+                    spacing=6,
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                    tooltip=full_tip,
+                )
+            )
+
+        items_list_box = ft.Container(
+            content=ft.ListView(
+                controls=items_preview_rows,
+                spacing=3,
+                height=min(120, max(45, len(selected_items) * 26)),
+            ),
+            bgcolor=CARD_INNER_BG,
+            border=ft.Border.all(1, OUTLINE_VARIANT),
+            border_radius=8,
+            padding=8,
         )
 
         warning_box = ft.Container(
@@ -92,6 +129,8 @@ class ConfirmCleanDialog(ft.AlertDialog):
             controls=[
                 ft.Text("Вы собираетесь выполнить глубокую очистку выбранного кэша:", color=TEXT_PRIMARY),
                 items_col,
+                ft.Text("Целевые пути очистки на диске:", size=11, weight=ft.FontWeight.W_600, color=TEXT_SECONDARY),
+                items_list_box,
                 warning_box,
                 ft.Text(
                     "Шейдеры GPU, CEF кэш и буферы видеозаписи будут безвозвратно удалены.",
