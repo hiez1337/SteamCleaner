@@ -9,6 +9,9 @@ import asyncio
 import subprocess
 import psutil
 
+# Windows flag to prevent flashing console windows
+CREATE_NO_WINDOW = 0x08000000 if sys.platform == "win32" else 0
+
 
 def is_process_running(name_substr: str) -> bool:
     """Check if any process matching name_substr is currently active."""
@@ -26,6 +29,7 @@ def is_process_running(name_substr: str) -> bool:
 def check_processes_running() -> tuple[bool, bool]:
     """
     Check running status for steam and cs2 in a single process scan pass.
+    Excludes background Windows service 'steamservice.exe'.
     Returns (steam_running, cs2_running).
     """
     steam_on = False
@@ -35,7 +39,7 @@ def check_processes_running() -> tuple[bool, bool]:
             name = (proc.info.get("name") or "").lower()
             if "cs2.exe" in name:
                 cs2_on = True
-            elif "steam.exe" in name:
+            elif name == "steam.exe":
                 steam_on = True
             if steam_on and cs2_on:
                 break
@@ -46,14 +50,14 @@ def check_processes_running() -> tuple[bool, bool]:
 
 def terminate_processes(name_substr: str) -> int:
     """
-    Terminate all active processes matching name_substr using native taskkill
-    on Windows and psutil fallback sweep.
+    Terminate all active processes matching name_substr using native silent taskkill
+    on Windows and a safe psutil sweep fallback.
     Returns the count of terminated processes.
     """
     target = name_substr.lower()
     terminated_count = 0
 
-    # 1. Native Windows taskkill with tree kill (/T) and force (/F)
+    # 1. Native Windows taskkill executed silently without flashing console window
     if sys.platform == "win32":
         try:
             res = subprocess.run(
@@ -61,6 +65,7 @@ def terminate_processes(name_substr: str) -> int:
                 capture_output=True,
                 text=True,
                 check=False,
+                creationflags=CREATE_NO_WINDOW,
             )
             c = res.stdout.count("SUCCESS") + res.stdout.count("УСПЕХ")
             if c > 0:
@@ -70,7 +75,7 @@ def terminate_processes(name_substr: str) -> int:
         except Exception:
             pass
 
-    # 2. psutil sweep for any remaining matching processes
+    # 2. psutil sweep for any remaining matching processes (handles permissions safely)
     matched_procs: list[psutil.Process] = []
     for proc in psutil.process_iter(["name"]):
         try:
@@ -79,6 +84,8 @@ def terminate_processes(name_substr: str) -> int:
                 matched_procs.append(proc)
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             continue
+        except Exception:
+            continue
 
     for p in matched_procs:
         try:
@@ -86,9 +93,14 @@ def terminate_processes(name_substr: str) -> int:
             terminated_count += 1
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             continue
+        except Exception:
+            continue
 
     if matched_procs:
-        psutil.wait_procs(matched_procs, timeout=1.5)
+        try:
+            psutil.wait_procs(matched_procs, timeout=0.8)
+        except Exception:
+            pass
 
     return terminated_count
 
@@ -96,15 +108,15 @@ def terminate_processes(name_substr: str) -> int:
 def terminate_all_game_processes() -> dict[str, int]:
     """
     Terminate CS2, Steam, CEF helpers and overlay.
+    Excludes Windows service 'steamservice.exe' to prevent UAC / access denied errors.
     Returns dictionary with counts per process group.
     """
     c_cs2 = terminate_processes("cs2.exe")
     c_steam = terminate_processes("steam.exe")
     c_cef = terminate_processes("steamwebhelper.exe")
     c_overlay = terminate_processes("gameoverlayui.exe")
-    c_service = terminate_processes("steamservice.exe")
 
-    total_cef_overlay = c_cef + c_overlay + c_service
+    total_cef_overlay = c_cef + c_overlay
     return {
         "cs2": c_cs2,
         "steam": c_steam,

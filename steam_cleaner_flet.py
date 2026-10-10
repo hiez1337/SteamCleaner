@@ -110,13 +110,17 @@ async def main(page: ft.Page):
     # 1. Header Bar
     async def handle_terminate_procs(e):
         console_view.append_log("Завершение процессов CS2, Steam и steamwebhelper...", "WARN")
-        res = await terminate_game_processes_async()
-        msg = f"Завершено процессов: {res['total']} (CS2={res['cs2']}, Steam={res['steam']}, CEF={res['cef']})"
-        console_view.append_log(msg, "SUCCESS")
-        show_snack(f"Завершено {res['total']} процессов Steam / CS2")
-        steam_on, cs2_on = await check_processes_async()
-        header_bar.update_process_status(steam_on, cs2_on)
-
+        try:
+            res = await terminate_game_processes_async()
+            msg = f"Завершено процессов: {res['total']} (CS2={res['cs2']}, Steam={res['steam']}, CEF={res['cef']})"
+            console_view.append_log(msg, "SUCCESS")
+            show_snack(f"Завершено {res['total']} процессов Steam / CS2")
+        except Exception as ex:
+            console_view.append_log(f"Ошибка при завершении процессов: {ex}", "ERROR")
+            show_snack(f"Ошибка завершения процессов: {ex}", is_error=True)
+        finally:
+            steam_on, cs2_on = await check_processes_async()
+            header_bar.update_process_status(steam_on, cs2_on)
     header_bar = HeaderBar(on_terminate_click=handle_terminate_procs)
 
     # 2. Console View

@@ -111,7 +111,6 @@ class HeaderBar(ft.Container):
             except Exception:
                 self.terminate_btn.disabled = False
                 self.terminate_btn.update()
-                raise
     def update_process_status(self, steam_on: bool, cs2_on: bool):
         """Update telemetry badge without repainting the entire page."""
         if cs2_on:
