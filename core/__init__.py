@@ -28,6 +28,11 @@ from core.backup_service import (
     restore_backup_async,
     get_backup_info,
 )
+from core.platform_utils import (
+    write_temp_log,
+    copy_to_windows_clipboard,
+    LOG_FILE_PATH,
+)
 
 __all__ = [
     "AccountInfo",
@@ -47,4 +52,7 @@ __all__ = [
     "create_backup_async",
     "restore_backup_async",
     "get_backup_info",
+    "write_temp_log",
+    "copy_to_windows_clipboard",
+    "LOG_FILE_PATH",
 ]

@@ -7,6 +7,7 @@ import asyncio
 import datetime
 import flet as ft
 from core.models import format_size
+from core.platform_utils import write_temp_log, copy_to_windows_clipboard
 from ui.theme import (
     CARD_BG,
     CARD_INNER_BG,
@@ -105,9 +106,14 @@ class ConsoleView(ft.Container):
             padding=ft.Padding.symmetric(horizontal=8, vertical=3),
         )
 
-    def _handle_copy(self, e):
+    async def _handle_copy(self, e):
+        full_text = self.get_full_text()
         if self.on_copy_click:
-            self.on_copy_click(self.get_full_text())
+            res = self.on_copy_click(full_text)
+            if asyncio.iscoroutine(res):
+                await res
+        else:
+            await asyncio.to_thread(copy_to_windows_clipboard, full_text)
 
     def clear_logs(self, e=None):
         """Clear all messages and update list view."""
@@ -125,7 +131,8 @@ class ConsoleView(ft.Container):
         return "".join(lines)
 
     def append_log(self, message: str, level: str = "INFO"):
-        """Queue log message for buffered non-blocking UI flush."""
+        """Queue log message for buffered non-blocking UI flush and write to %TEMP% log."""
+        write_temp_log(message, level)
         now_str = datetime.datetime.now().strftime("%H:%M:%S")
         color = TEXT_PRIMARY
         if level == "SUCCESS":

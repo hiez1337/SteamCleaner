@@ -21,6 +21,8 @@ from core import (
     create_backup_async,
     restore_backup_async,
     get_backup_info,
+    copy_to_windows_clipboard,
+    LOG_FILE_PATH,
 )
 from ui import get_app_theme, AppState
 from ui.theme import (
@@ -91,21 +93,27 @@ async def main(page: ft.Page):
     # Category Cards registry: cat_name -> CacheCategoryCard
     category_cards: dict[str, CacheCategoryCard] = {}
 
+    snack_bar = ft.SnackBar(
+        content=ft.Text(""),
+        bgcolor=ACCENT_PRIMARY,
+        open=False,
+    )
+    page.overlay.append(snack_bar)
+
     def show_snack(message: str, is_error: bool = False):
-        """Safe SnackBar presentation without leaking controls in page.overlay."""
-        page.overlay = [c for c in page.overlay if not isinstance(c, ft.SnackBar)]
-        snack = ft.SnackBar(
-            content=ft.Text(message, color="#11111b" if not is_error else TEXT_PRIMARY),
-            bgcolor=ACCENT_DANGER if is_error else ACCENT_PRIMARY,
-            open=True,
-        )
-        page.overlay.append(snack)
-        page.update()
+        """Safe SnackBar presentation using dedicated control update."""
+        snack_bar.content = ft.Text(message, color="#11111b" if not is_error else TEXT_PRIMARY)
+        snack_bar.bgcolor = ACCENT_DANGER if is_error else ACCENT_PRIMARY
+        snack_bar.open = True
+        snack_bar.update()
 
     async def handle_copy_log(text: str):
         if text:
-            await page.set_clipboard(text)
-            show_snack("Журнал операций скопирован в буфер обмена")
+            ok = await asyncio.to_thread(copy_to_windows_clipboard, text)
+            if ok:
+                show_snack("Журнал скопирован в буфер обмена")
+            else:
+                show_snack(f"Лог сохранен: {LOG_FILE_PATH}")
 
     # 1. Header Bar
     async def handle_terminate_procs(e):
