@@ -3,6 +3,7 @@
 Header Bar component displaying application title, process telemetry and termination button.
 """
 
+import asyncio
 import flet as ft
 from ui.theme import (
     CARD_BG,
@@ -99,10 +100,18 @@ class HeaderBar(ft.Container):
             padding=ft.Padding.symmetric(horizontal=12, vertical=8),
         )
 
-    def _handle_terminate(self, e):
+    async def _handle_terminate(self, e):
         if self.on_terminate_click:
-            self.on_terminate_click(e)
-
+            self.terminate_btn.disabled = True
+            self.terminate_btn.update()
+            try:
+                res = self.on_terminate_click(e)
+                if asyncio.iscoroutine(res):
+                    await res
+            except Exception:
+                self.terminate_btn.disabled = False
+                self.terminate_btn.update()
+                raise
     def update_process_status(self, steam_on: bool, cs2_on: bool):
         """Update telemetry badge without repainting the entire page."""
         if cs2_on:

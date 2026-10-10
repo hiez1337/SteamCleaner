@@ -3,7 +3,10 @@
 Non-blocking process monitoring and termination guard for Steam & CS2.
 """
 
+import os
+import sys
 import asyncio
+import subprocess
 import psutil
 
 
@@ -43,13 +46,32 @@ def check_processes_running() -> tuple[bool, bool]:
 
 def terminate_processes(name_substr: str) -> int:
     """
-    Terminate all active processes matching name_substr.
+    Terminate all active processes matching name_substr using native taskkill
+    on Windows and psutil fallback sweep.
     Returns the count of terminated processes.
     """
     target = name_substr.lower()
     terminated_count = 0
-    matched_procs: list[psutil.Process] = []
 
+    # 1. Native Windows taskkill with tree kill (/T) and force (/F)
+    if sys.platform == "win32":
+        try:
+            res = subprocess.run(
+                ["taskkill", "/F", "/T", "/IM", name_substr],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            c = res.stdout.count("SUCCESS") + res.stdout.count("УСПЕХ")
+            if c > 0:
+                terminated_count += c
+            elif res.returncode == 0:
+                terminated_count += 1
+        except Exception:
+            pass
+
+    # 2. psutil sweep for any remaining matching processes
+    matched_procs: list[psutil.Process] = []
     for proc in psutil.process_iter(["name"]):
         try:
             p_name = proc.info.get("name")
@@ -60,36 +82,34 @@ def terminate_processes(name_substr: str) -> int:
 
     for p in matched_procs:
         try:
-            p.terminate()
+            p.kill()
             terminated_count += 1
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             continue
 
     if matched_procs:
-        gone, alive = psutil.wait_procs(matched_procs, timeout=1.5)
-        for p in alive:
-            try:
-                p.kill()
-            except (psutil.NoSuchProcess, psutil.AccessDenied):
-                pass
+        psutil.wait_procs(matched_procs, timeout=1.5)
 
     return terminated_count
 
 
 def terminate_all_game_processes() -> dict[str, int]:
     """
-    Terminate CS2, Steam and CEF helpers.
+    Terminate CS2, Steam, CEF helpers and overlay.
     Returns dictionary with counts per process group.
     """
     c_cs2 = terminate_processes("cs2.exe")
     c_steam = terminate_processes("steam.exe")
     c_cef = terminate_processes("steamwebhelper.exe")
+    c_overlay = terminate_processes("gameoverlayui.exe")
     c_service = terminate_processes("steamservice.exe")
+
+    total_cef_overlay = c_cef + c_overlay + c_service
     return {
         "cs2": c_cs2,
         "steam": c_steam,
-        "cef": c_cef + c_service,
-        "total": c_cs2 + c_steam + c_cef + c_service,
+        "cef": total_cef_overlay,
+        "total": c_cs2 + c_steam + total_cef_overlay,
     }
 
 

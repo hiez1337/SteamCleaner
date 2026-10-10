@@ -4,6 +4,7 @@ Config Bar component implementing responsive Steam & CS2 path controls and actio
 """
 
 import os
+import asyncio
 import flet as ft
 from core.models import AccountInfo
 from ui.theme import (
@@ -231,30 +232,41 @@ class ConfigBar(ft.Container):
         if self.steam_path and os.path.isdir(self.steam_path):
             os.startfile(self.steam_path)
 
-    def _handle_browse(self, e):
+    async def _handle_browse(self, e):
         if self.on_browse_click:
-            self.on_browse_click(e)
+            res = self.on_browse_click(e)
+            if asyncio.iscoroutine(res):
+                await res
 
-    def _handle_account_change(self, e):
+    async def _handle_account_change(self, e):
         if self.on_account_change:
-            self.on_account_change(self.account_dropdown.value)
+            res = self.on_account_change(self.account_dropdown.value)
+            if asyncio.iscoroutine(res):
+                await res
 
-    def _handle_scan(self, e):
+    async def _handle_scan(self, e):
         if self.on_scan_click:
-            self.on_scan_click(e)
+            res = self.on_scan_click(e)
+            if asyncio.iscoroutine(res):
+                await res
 
-    def _handle_clean(self, e):
+    async def _handle_clean(self, e):
         if self.on_clean_click:
-            self.on_clean_click(e)
+            res = self.on_clean_click(e)
+            if asyncio.iscoroutine(res):
+                await res
 
-    def _handle_backup(self, e):
+    async def _handle_backup(self, e):
         if self.on_backup_click:
-            self.on_backup_click(e)
+            res = self.on_backup_click(e)
+            if asyncio.iscoroutine(res):
+                await res
 
-    def _handle_restore(self, e):
+    async def _handle_restore(self, e):
         if self.on_restore_click:
-            self.on_restore_click(e)
-
+            res = self.on_restore_click(e)
+            if asyncio.iscoroutine(res):
+                await res
     def update_paths(self, steam_path: str, cs2_path: str, accounts: list[AccountInfo], selected_acc_id: str):
         """Update display when path or accounts change."""
         self.steam_path = steam_path
