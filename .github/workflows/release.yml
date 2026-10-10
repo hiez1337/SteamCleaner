@@ -1,0 +1,120 @@
+name: Build & Release Windows Executable
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: "Release tag (e.g. v1.0.0)"
+        required: true
+        default: "v1.0.0"
+        type: string
+      release_title:
+        description: "Release Title"
+        required: false
+        default: "SteamCleaner v1.0.0"
+        type: string
+      draft:
+        description: "Create Draft Release"
+        required: false
+        default: false
+        type: boolean
+      prerelease:
+        description: "Mark as Pre-release"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Package Windows EXE & Release
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies and packaging tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller flet-cli
+
+      - name: Verify application imports and syntax
+        run: |
+          python -m py_compile steam_cleaner_flet.py steam_cleaner.py
+          python -c "import flet, psutil; from core import *; from ui import *; print('All modules validated OK')"
+
+      - name: Build standalone Windows executable via flet pack
+        run: |
+          flet pack steam_cleaner_flet.py `
+            --name SteamCleaner `
+            --product-name "CS2 & Steam Deep Cache Cleaner" `
+            --file-description "CS2 & Steam Deep Cache Cleaner" `
+            --product-version "1.0.0" `
+            --file-version "1.0.0.0" `
+            --yes
+
+      - name: Verify build artifact existence
+        run: |
+          if (!(Test-Path "dist/SteamCleaner.exe")) {
+            Write-Error "dist/SteamCleaner.exe was not created!"
+            exit 1
+          }
+          $size = (Get-Item "dist/SteamCleaner.exe").Length / 1MB
+          Write-Host ("SteamCleaner.exe built successfully. Size: {0:N2} MB" -f $size)
+
+      - name: Create ZIP archive for distribution
+        run: |
+          Compress-Archive -Path dist/SteamCleaner.exe -DestinationPath "dist/SteamCleaner-windows-x64.zip" -Force
+
+      - name: Upload build artifacts to workflow
+        uses: actions/upload-artifact@v4
+        with:
+          name: SteamCleaner-windows-x64
+          path: dist/*
+          if-no-files-found: error
+
+      - name: Determine tag name and title
+        id: meta
+        shell: pwsh
+        run: |
+          if ("${{ github.ref_type }}" -eq "tag") {
+            $tag = "${{ github.ref_name }}"
+          } else {
+            $tag = "${{ inputs.tag_name }}"
+          }
+          if (-not $tag) { $tag = "v1.0.0" }
+
+          $title = "${{ inputs.release_title }}"
+          if (-not $title) { $title = "SteamCleaner $tag" }
+
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+          "title=$title" >> $env:GITHUB_OUTPUT
+
+      - name: Create or update GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.meta.outputs.tag }}
+          name: ${{ steps.meta.outputs.title }}
+          draft: ${{ inputs.draft || false }}
+          prerelease: ${{ inputs.prerelease || false }}
+          files: |
+            dist/SteamCleaner.exe
+            dist/SteamCleaner-windows-x64.zip
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
