@@ -1,0 +1,6 @@
+# Steam & CS2 Deep Cache Cleaner Dependencies
+flet>=1.0.3
+flet-desktop>=1.0.3
+flet-cli>=1.0.3
+psutil>=5.9.0
+pillow>=10.0.0

@@ -1,0 +1,35 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# PyInstaller / Flet build outputs
+build/
+dist/
+*.spec
+
+# User local backups (keep directory via .gitkeep)
+backups/*.zip
+!backups/.gitkeep
+
+# Screenshots (keep preview screenshot for README)
+screenshots/*.png
+!screenshots/refactor_verify.png
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# IDE / Editor configuration
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
