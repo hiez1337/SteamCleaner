@@ -74,8 +74,8 @@ class ConfigBar(ft.Container):
             border_radius=6,
             padding=ft.Padding.symmetric(horizontal=10, vertical=5),
             tooltip="Открыть директорию Steam в Проводнике",
+            ink=True,
             on_click=self._open_steam_in_explorer,
-            mouse_cursor=ft.MouseCursor.CLICK,
         )
 
         self.browse_btn = ft.OutlinedButton(
@@ -118,8 +118,8 @@ class ConfigBar(ft.Container):
             border_radius=12,
             padding=ft.Padding.symmetric(horizontal=8, vertical=4),
             tooltip="Нажмите, чтобы открыть директорию CS2 в Проводнике" if cs2_path else "CS2 не найдена",
-            on_click=self._open_cs2_in_explorer,
-            mouse_cursor=ft.MouseCursor.CLICK if cs2_path else ft.MouseCursor.BASIC,
+            ink=bool(cs2_path),
+            on_click=self._open_cs2_in_explorer if cs2_path else None,
         )
 
         # Account dropdown
@@ -313,7 +313,8 @@ class ConfigBar(ft.Container):
         self.cs2_status_pill.bgcolor = SUCCESS_BG if cs2_path else CARD_INNER_BG
         self.cs2_status_pill.border = ft.Border.all(1, SUCCESS_BORDER if cs2_path else OUTLINE_VARIANT)
         self.cs2_status_pill.tooltip = "Нажмите, чтобы открыть директорию CS2 в Проводнике" if cs2_path else "CS2 не найдена"
-
+        self.cs2_status_pill.ink = bool(cs2_path)
+        self.cs2_status_pill.on_click = self._open_cs2_in_explorer if cs2_path else None
         if accounts:
             self.account_dropdown.options = [
                 ft.DropdownOption(

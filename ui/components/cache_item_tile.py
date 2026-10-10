@@ -68,8 +68,8 @@ class CacheItemTile(ft.Container):
             border_radius=8,
             padding=ft.Padding.symmetric(horizontal=7, vertical=3),
             bgcolor=CARD_INNER_BG,
+            ink=True,
             on_click=self._handle_open_click,
-            mouse_cursor=ft.MouseCursor.CLICK,
         )
 
         warning_chip = ft.Container(
@@ -120,8 +120,8 @@ class CacheItemTile(ft.Container):
             ),
             tooltip=full_tooltip,
             padding=ft.Padding.only(left=28, top=2, bottom=1),
+            ink=True,
             on_click=self._handle_open_click,
-            mouse_cursor=ft.MouseCursor.CLICK,
         )
 
         super().__init__(
